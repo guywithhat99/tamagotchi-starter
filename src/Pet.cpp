@@ -9,12 +9,7 @@ static const int HAPPY_THRESHOLD = 60;
 static const int SAD_THRESHOLD   = 40;
 
 static const unsigned long BACKLIGHT_TIMEOUT = 30000;  // ms
-static const unsigned long ALERT_COOLDOWN    = 15000;  // ms
 static const unsigned long MSG_DURATION      = 2000;   // ms
-
-// Alert tone — passed to the global playTone() defined in sound.cpp
-static const int ALERT_FREQ     = 880;
-static const int ALERT_DURATION = 150;
 
 // Display pins
 static const int PIN_DC  = 8;
@@ -47,7 +42,7 @@ Pet::Pet()
       food(STAT_MAX), water(STAT_MAX), energy(STAT_MAX),
       _decayEnabled(false), _backlightOn(true),
       _lastMood(Mood::HAPPY), _currentMsg(""),
-      _lastDecay(0), _lastActivity(0), _msgClearAt(0), _lastAlert(0)
+      _lastDecay(0), _lastActivity(0), _msgClearAt(0)
 {}
 
 // ── Public API ───────────────────────────────────────────────────────────────
@@ -102,11 +97,6 @@ void Pet::update() {
         _redraw();
     }
 
-    // Alert with cooldown
-    if (needsAlert() && (now - _lastAlert >= ALERT_COOLDOWN)) {
-        _lastAlert = now;
-        _triggerAlert();
-    }
 }
 
 void Pet::feed() {
@@ -270,12 +260,3 @@ void Pet::_clearTextZone() {
     _lcd.fillRect(0, TEXT_Y, 240, 30, 0x0000);
 }
 
-void Pet::_triggerAlert() {
-    const char* msgs[] = {"Hey...", "I'm hungry...", "Don't forget me!", "Hellooo?"};
-    _showMessage(msgs[random(4)]);
-    playTone(ALERT_FREQ, ALERT_DURATION);
-    setLed(1, 0, 0);
-    delay(200);
-    setLed(0, 0, 0);
-    _drawSprite(Mood::SAD);
-}

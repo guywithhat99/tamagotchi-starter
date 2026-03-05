@@ -10,6 +10,7 @@ void setup() {
 }
 
 void loop() {
+    Serial.println("Updating pet...");
     pet.update();
     delay(50);
 }

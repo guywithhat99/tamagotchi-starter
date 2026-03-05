@@ -11,7 +11,7 @@ enum class Mood { HAPPY, OKAY, SAD, DEAD };
 
 struct PetConfig {
     int decayRate      = 1;
-    int decayInterval  = 10000;
+    int decayInterval  = 30000;
     int feedAmount     = 20;
     int drinkAmount    = 20;
     int exerciseCap    = 30;
@@ -78,8 +78,6 @@ private:
     unsigned long _lastDecay;
     unsigned long _lastActivity;
     unsigned long _msgClearAt;
-    unsigned long _lastAlert;
-
     PetConfig _cfg;
 
     Mood   _computeMood();
@@ -90,5 +88,4 @@ private:
     void   _showMessage(String msg);
     void   _drawText(String msg);
     void   _clearTextZone();
-    void   _triggerAlert();
 };
