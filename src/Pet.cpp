@@ -55,10 +55,17 @@ void Pet::begin() {
 void Pet::begin(PetConfig cfg) {
     _cfg = cfg;
 
+    // Set SPI1 pins explicitly so the peripheral doesn't claim PIN_DC (GP8),
+    // PIN_RST (GP12), or PIN_BL (GP13) — all of which overlap SPI1 defaults.
+    SPI1.setRX(28);   // MISO → GP28 (unused); default GP8 = PIN_DC, default GP12 = PIN_RST
+    SPI1.setTX(11);   // MOSI = GP11
+    SPI1.setSCK(10);  // SCK  = GP10
+    SPI1.begin();
+
+    // Re-assert backlight as GPIO output AFTER SPI1.begin(), which may have
+    // touched GP13 (the SPI1 default SS pin) via gpio_init().
     pinMode(PIN_BL, OUTPUT);
     digitalWrite(PIN_BL, HIGH);
-
-    SPI1.begin();
     _lcd.init(240, 240);
     _lcd.setRotation(2);
     _lcd.fillScreen(0x0000);
