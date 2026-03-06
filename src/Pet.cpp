@@ -22,7 +22,15 @@ static const int SPRITE_W = 120;
 static const int SPRITE_H = 120;
 static const int SPRITE_X = (240 - SPRITE_W) / 2;
 static const int SPRITE_Y = 20;
-static const int TEXT_Y   = SPRITE_Y + SPRITE_H + 10;
+
+// Stat bars layout
+static const int BAR_Y     = SPRITE_Y + SPRITE_H + 6;  // 146
+static const int BAR_H     = 6;
+static const int BAR_GAP   = 4;
+static const int BAR_W     = 160;
+static const int BAR_X     = (240 - BAR_W) / 2;         // 40
+
+static const int TEXT_Y    = BAR_Y + (BAR_H + BAR_GAP) * 3 + 4;  // ~176
 static const int IND_Y    = 240 - 30;
 static const int IND_R    = 8;
 
@@ -42,7 +50,8 @@ Pet::Pet()
       food(STAT_MAX), water(STAT_MAX), energy(STAT_MAX),
       _decayEnabled(false), _backlightOn(true),
       _lastMood(Mood::HAPPY), _currentMsg(""),
-      _lastDecay(0), _lastActivity(0), _msgClearAt(0)
+      _lastDecay(0), _lastActivity(0), _msgClearAt(0),
+      _prevFood(-1), _prevWater(-1), _prevEnergy(-1)
 {}
 
 // ── Public API ───────────────────────────────────────────────────────────────
@@ -84,6 +93,7 @@ void Pet::update() {
     if (_decayEnabled && (now - _lastDecay >= (unsigned long)_cfg.decayInterval)) {
         _decayAll();
         _lastDecay = now;
+        _drawStatBars();
     }
 
     // Clear message after MSG_DURATION
@@ -113,10 +123,10 @@ void Pet::feed() {
 
     String msg;
     switch (_computeMood()) {
-        case Mood::HAPPY: { const char* p[] = {"Yum!", "So full!", "Mmm!", "Delicious!"}; msg = p[random(4)]; break; }
-        case Mood::SAD:   { const char* p[] = {"Finally...", "Needed that", "More please..."}; msg = p[random(3)]; break; }
-        case Mood::DEAD:  msg = "*munch*"; break;
-        default:          { const char* p[] = {"Thanks!", "Nom!", "Tasty!"}; msg = p[random(3)]; break; }
+        case Mood::HAPPY: { const char* p[] = {"Yum!", "So full!", "Mmm!", "Delicious!", "Nom nom!", "Tasty!", "More more!", "Perfect!"}; msg = p[random(8)]; break; }
+        case Mood::SAD:   { const char* p[] = {"Finally...", "Needed that", "More please...", "Thank you...", "Was starving...", "*nibble*", "About time..."}; msg = p[random(7)]; break; }
+        case Mood::DEAD:  { const char* p[] = {"*munch*", "*chew*", "...food..."}; msg = p[random(3)]; break; }
+        default:          { const char* p[] = {"Thanks!", "Nom!", "Tasty!", "Yum!", "Not bad!", "Solid snack!", "Munch!"}; msg = p[random(7)]; break; }
     }
     _showMessage(msg);
     _redraw();
@@ -129,10 +139,10 @@ void Pet::drink() {
 
     String msg;
     switch (_computeMood()) {
-        case Mood::HAPPY: { const char* p[] = {"Ahhh!", "Refreshing!", "Glug glug!", "Hydrated!"}; msg = p[random(4)]; break; }
-        case Mood::SAD:   { const char* p[] = {"So thirsty...", "Needed that...", "*sip*"}; msg = p[random(3)]; break; }
-        case Mood::DEAD:  msg = "*slurp*"; break;
-        default:          { const char* p[] = {"Thanks!", "Glug!", "Nice!"}; msg = p[random(3)]; break; }
+        case Mood::HAPPY: { const char* p[] = {"Ahhh!", "Refreshing!", "Glug glug!", "Hydrated!", "So crisp!", "Splashy!", "Bubbly!", "Cool!"}; msg = p[random(8)]; break; }
+        case Mood::SAD:   { const char* p[] = {"So thirsty...", "Needed that...", "*sip*", "Finally water...", "Was parched...", "*gulp*", "More water..."}; msg = p[random(7)]; break; }
+        case Mood::DEAD:  { const char* p[] = {"*slurp*", "*drip*", "...water..."}; msg = p[random(3)]; break; }
+        default:          { const char* p[] = {"Thanks!", "Glug!", "Nice!", "Refreshing!", "Sip sip!", "Hydrating!", "Cheers!"}; msg = p[random(7)]; break; }
     }
     _showMessage(msg);
     _redraw();
@@ -142,7 +152,8 @@ void Pet::exercise(int boost) {
     energy = min(STAT_MAX, energy + constrain(boost, 0, _cfg.exerciseCap));
     _lastActivity = millis();
     if (!_backlightOn) { digitalWrite(PIN_BL, HIGH); _backlightOn = true; }
-    _showMessage("Nice work!");
+    const char* p[] = {"Nice work!", "Pumped!", "So strong!", "Beast mode!", "Gains!", "Lets go!", "Fired up!", "Crushing it!"};
+    _showMessage(p[random(8)]);
     _redraw();
 }
 
@@ -153,20 +164,20 @@ void Pet::enableDecay() {
 String Pet::catchphrase() {
     switch (_computeMood()) {
         case Mood::HAPPY: {
-            const char* p[] = {"Yay!", "So happy!", "Wheee!", "Love this!", "Best day!"};
-            return p[random(5)];
+            const char* p[] = {"Yay!", "So happy!", "Wheee!", "Love this!", "Best day!", "Woohoo!", "Amazing!", "Top notch!", "Living it!", "Lets goooo!"};
+            return p[random(10)];
         }
         case Mood::SAD: {
-            const char* p[] = {"Hungry...", "Feed me...", "So tired...", "Help..."};
-            return p[random(4)];
+            const char* p[] = {"Hungry...", "Feed me...", "So tired...", "Help...", "Please...", "Lonely...", "Need food...", "Ugh..."};
+            return p[random(8)];
         }
         case Mood::DEAD: {
-            const char* p[] = {"x_x", "...", "zzz"};
-            return p[random(3)];
+            const char* p[] = {"x_x", "...", "zzz", "*silence*", "...help..."};
+            return p[random(5)];
         }
         default: {
-            const char* p[] = {"Hey!", "Sup", "I'm ok", "...", "Hi there"};
-            return p[random(5)];
+            const char* p[] = {"Hey!", "Sup", "I'm ok", "...", "Hi there", "Yo!", "Chillin", "Heya!", "Waddup", "Not bad"};
+            return p[random(10)];
         }
     }
 }
@@ -210,6 +221,7 @@ void Pet::_decayAll() {
 void Pet::_redraw() {
     _lastMood = _computeMood();
     _drawSprite(_lastMood);
+    _drawStatBars();
     if (_currentMsg.length() > 0) {
         _drawText(_currentMsg);
     }
@@ -233,6 +245,30 @@ void Pet::_drawSprite(Mood m) {
         _lcd.SPI_WRITE16((hi << 8) | lo);
     }
     _lcd.endWrite();
+}
+
+void Pet::_drawStatBars() {
+    int stats[3]     = { food, water, energy };
+    int prev[3]      = { _prevFood, _prevWater, _prevEnergy };
+
+    for (int i = 0; i < 3; i++) {
+        if (stats[i] == prev[i]) continue;  // skip unchanged bars
+
+        int y = BAR_Y + i * (BAR_H + BAR_GAP);
+        int fillW = (int)((long)stats[i] * BAR_W / STAT_MAX);
+
+        // Clear whole bar area then redraw
+        _lcd.fillRect(BAR_X, y, BAR_W, BAR_H, 0x0000);
+        if (fillW > 0) {
+            _lcd.fillRect(BAR_X, y, fillW, BAR_H, IND_COL[i]);
+        }
+        // Outline
+        _lcd.drawRect(BAR_X, y, BAR_W, BAR_H, 0x7BEF);  // grey outline
+    }
+
+    _prevFood   = food;
+    _prevWater  = water;
+    _prevEnergy = energy;
 }
 
 void Pet::_drawIndicators() {
@@ -264,6 +300,5 @@ void Pet::_drawText(String msg) {
 }
 
 void Pet::_clearTextZone() {
-    _lcd.fillRect(0, TEXT_Y, 240, 30, 0x0000);
+    _lcd.fillRect(0, TEXT_Y, 240, 20, 0x0000);
 }
-
